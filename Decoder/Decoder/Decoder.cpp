@@ -5,6 +5,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <functional>
+#include <algorithm>
+#include <cmath>
 #include "Mother.h"
 
 int main()
@@ -38,8 +41,11 @@ int main()
 
     //start input
     string path;
-    std::cin >> path;
-
+    string command;
+    std::cin >> command;
+    if (command == "default")
+        path = "gps_sequence_1.txt";
+    else path = command;
     //read file with name from input
     //file needs to be inside the source data folder
     //current name is gps_sequence_1.txt
@@ -58,5 +64,38 @@ int main()
     while (getline(values, single_value, ' ')) {
         converted_values.push_back(stoi(single_value));
     }
-    cout << file_content << endl;
+    int number_satellites = 0;
+    for (auto elem : converted_values) {
+        if (abs(elem) > number_satellites) number_satellites = abs(elem);
+    }
+    int max_margin = (number_satellites * 63);
+    int min_margin = (number_satellites * -65);
+
+    for (auto elem : satellites) {
+        vector<int> chip_sequence = elem.get_chip_sequence();
+        int result = 0;
+        float normalized_result = 0;
+        int bit = 0;
+        for (int i = 0; i < 1023; i++)
+        {
+            result = 0;
+            normalized_result = 0;
+            for (int t = 0; t < 1023; t++)
+            {
+                result += chip_sequence.at(t) * converted_values.at(t); 
+            }
+            if (result > max_margin || result < min_margin) {
+                if (result > 0) {
+                    bit = 1;
+                }
+                else {
+                    bit = 0;
+                }
+                cout << "Satellite " << elem.get_id() << " has sent bit " << bit << " ( delta = " << i << " )" << endl;
+                break;
+            }
+            std::rotate(chip_sequence.rbegin(), chip_sequence.rbegin() + 1, chip_sequence.rend());
+        }
+
+    }
 }
